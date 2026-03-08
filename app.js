@@ -385,20 +385,39 @@ function showClientDropdown() {
 function formatPhone(input) {
     let value = input.value.replace(/\D/g, '');
     
+    // Format: (XX) 9XXXX-XXXX
     if (value.length > 0) {
-        value = '(' + value;
-    }
-    if (value.length > 3) {
-        value = value.substring(0, 3) + ')' + value.substring(3);
-    }
-    if (value.length > 9) {
-        value = value.substring(0, 10) + '-' + value.substring(10);
+        value = value.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+        // If not 11 digits yet, try partial format
+        if (value.length <= 14) {
+            value = input.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+                value = '(' + value;
+                if (value.length > 3) {
+                    value = value.substring(0, 3) + ') ' + value.substring(3);
+                }
+                if (value.length > 10) {
+                    value = value.substring(0, 10) + '-' + value.substring(10);
+                }
+            }
+        }
     }
     
     input.value = value.substring(0, 15);
     
     // Update preview
     updateMessagePreview();
+}
+
+// ========================================
+// Report Bug
+// ========================================
+
+function reportBug() {
+    const phoneNumber = '5521971593565'; // WhatsApp number
+    const message = 'Olá MrsNesbitt, encontrei um erro no sistema e preciso de ajuda. O bug que está acontecendo é:';
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
 }
 
 // ========================================
@@ -762,7 +781,7 @@ function saveDelivery(event) {
         const newClient = {
             id: generateId(),
             nome: name,
-            telefone: noPhone ? '' : phone,
+            telefone: noPhone ? '' : formatPhoneNumber(phone),
             endereco: address,
             pontoReferencia: reference,
             dataCadastro: new Date().toISOString()
@@ -776,7 +795,7 @@ function saveDelivery(event) {
         id: currentDeliveryId || generateId(),
         clienteId: selectedClientId,
         nome: name,
-        telefone: noPhone ? '' : phone,
+        telefone: noPhone ? '' : formatPhoneNumber(phone),
         pedido: description,
         itensPedido: orderItems, // Save the structured order items with store info
         retirada: pickupLocation,
@@ -1487,7 +1506,7 @@ document.getElementById('edit-client-form').addEventListener('submit', function(
         clients[clientIndex] = {
             ...clients[clientIndex],
             nome: document.getElementById('edit-client-name').value,
-            telefone: document.getElementById('edit-client-phone').value,
+            telefone: formatPhoneNumber(document.getElementById('edit-client-phone').value),
             endereco: document.getElementById('edit-client-address').value,
             pontoReferencia: document.getElementById('edit-client-reference').value
         };

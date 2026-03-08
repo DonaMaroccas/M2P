@@ -43,3 +43,13 @@ function clearOldStoreCache() {
         console.log('Old store cache cleared. Using config.js stores.');
     }
 }
+
+// Phone formatting utility - ensures consistent format (XX) 9XXXX-XXXX
+function formatPhoneNumber(phone) {
+    if (!phone) return '';
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 11) {
+        return digits.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+    }
+    return phone; // Return original if not 11 digits
+}
