@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Pets</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Screen: Home -->
+        <div id="home-screen" class="screen active">
+            <header class="app-header home-header">
+                <h1>🐾 Delivery Pets</h1>
+                <button class="icon-btn" onclick="showClientsModal()">👥</button>
+            </header>
+            
+            <div class="home-options">
+                <div class="home-card" onclick="navigateTo('replenishment')">
+                    <span class="home-card-icon">🔄</span>
+                    <span class="home-card-title">Reposição</span>
+                    <span class="home-card-desc">Criar lista de reposição</span>
+                </div>
+                
+                <div class="home-card" onclick="navigateTo('deliveries')">
+                    <span class="home-card-icon">📦</span>
+                    <span class="home-card-title">Pedidos</span>
+                    <span class="home-card-desc">Gerenciar entregas</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clients Modal -->
+        <div id="clients-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Clientes Salvos</h2>
+                    <button class="close-btn" onclick="closeClientsModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <input type="text" id="client-filter" class="input-field" 
+                               placeholder="Buscar cliente..." 
+                               oninput="filterClients(this.value)">
+                    </div>
+                    <div id="clients-list" class="clients-list">
+                        <!-- Clients will be rendered here -->
+                    </div>
+                    <div id="no-clients" class="empty-state hidden">
+                        <span class="empty-icon">👥</span>
+                        <p>Nenhum cliente encontrado</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Client Modal -->
+        <div id="edit-client-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Editar Cliente</h2>
+                    <button class="close-btn" onclick="closeEditClientModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-client-form">
+                        <input type="hidden" id="edit-client-id">
+                        <div class="form-group">
+                            <label>Nome</label>
+                            <input type="text" id="edit-client-name" class="input-field" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Telefone</label>
+                            <input type="tel" id="edit-client-phone" class="input-field" placeholder="(00)00000-0000" oninput="formatPhoneEdit()">
+                        </div>
+                        <div class="form-group">
+                            <label>Endereço</label>
+                            <input type="text" id="edit-client-address" class="input-field">
+                        </div>
+                        <div class="form-group">
+                            <label>Ponto de Referência</label>
+                            <input type="text" id="edit-client-reference" class="input-field">
+                        </div>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-danger" onclick="deleteClient()">🗑️ Excluir</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeEditClientModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">💾 Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-btn active" data-screen="home">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Início</span>
+            </button>
+            <button class="nav-btn" data-screen="deliveries">
+                <span class="nav-icon">📦</span>
+                <span class="nav-label">Pedidos</span>
+            </button>
+            <button class="nav-btn" data-screen="replenishment">
+                <span class="nav-icon">🔄</span>
+                <span class="nav-label">Reposição</span>
+            </button>
+            <button class="nav-btn" data-screen="validity">
+                <span class="nav-icon">📅</span>
+                <span class="nav-label">Validade</span>
+            </button>
+        </nav>
+
+        <!-- Screen: Deliveries List -->
+        <div id="deliveries-screen" class="screen">
+            <header class="app-header">
+                <h1>Delivery Pets</h1>
+                <button class="icon-btn" onclick="showNewDeliveryForm()">➕</button>
+            </header>
+            
+            <div id="deliveries-list" class="deliveries-container">
+                <!-- Delivery cards will be rendered here -->
+            </div>
+
+            <div id="empty-state" class="empty-state hidden">
+                <span class="empty-icon">📦</span>
+                <p>Nenhuma entrega cadastrada</p>
+                <button class="btn btn-primary" onclick="showNewDeliveryForm()">Nova Entrega</button>
+            </div>
+
+            <button class="fab" onclick="showNewDeliveryForm()">➕</button>
+        </div>
+
+        <!-- Screen: New Delivery Form -->
+        <div id="new-delivery-screen" class="screen">
+            <header class="app-header">
+                <button class="back-btn" onclick="showDeliveriesList()">←</button>
+                <h1>Nova Entrega</h1>
+            </header>
+
+            <form id="delivery-form" class="form" onsubmit="saveDelivery(event)">
+                <!-- Client Data Section -->
+                <section class="form-section">
+                    <h2 class="section-title">👤 Dados do Cliente</h2>
+                    
+                    <div class="form-group">
+                        <label for="client-search">Buscar Cliente</label>
+                        <input type="text" id="client-search" class="input-field" 
+                               placeholder="Digite para buscar..."
+                               oninput="searchClients(this.value)"
+                               onfocus="showClientDropdown()"
+                               autocomplete="off">
+                        <div id="client-dropdown" class="dropdown hidden"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="client-name">Nome *</label>
+                        <input type="text" id="client-name" class="input-field" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="client-phone">Telefone *</label>
+                        <input type="tel" id="client-phone" class="input-field" 
+                               placeholder="(00)00000-0000" required
+                               oninput="formatPhone(this)"
+                               maxlength="15">
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="no-phone">
+                        <label for="no-phone">Não tem telefone</label>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="client-address">Endereço *</label>
+                        <input type="text" id="client-address" class="input-field" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="client-reference">Ponto de Referência *</label>
+                        <input type="text" id="client-reference" class="input-field" required>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="save-client" checked>
+                        <label for="save-client">Salvar novo cliente</label>
+                    </div>
+                </section>
+
+                <!-- Order Data Section -->
+                <section class="form-section">
+                    <h2 class="section-title">📋 Dados do Pedido</h2>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="loja-unica" onchange="toggleLojaUnica()">
+                        <label for="loja-unica">🏪 Loja Única</label>
+                    </div>
+
+                    <div id="loja-unica-section" class="form-group hidden">
+                        <label for="pickup-location">Local de Retirada</label>
+                        <select id="pickup-location" class="input-field" onchange="parseOrderItems()">
+                            <option value="">Selecione...</option>
+                            <option value="marcao">Marcão</option>
+                            <option value="chc">CHC</option>
+                            <option value="ruah">Rua H</option>
+                            <option value="lagoas">Lagoas</option>
+                            <option value="cdd">CDD</option>
+                            <option value="favelao">Favelão</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-description">Descrição do Pedido</label>
+                        <textarea id="order-description" class="input-field textarea" rows="4"
+                                  placeholder="1. Ração&#10;2. Areia&#10;3. Sachê"
+                                  oninput="parseOrderItems()"></textarea>
+                    </div>
+
+                    <div id="order-items-container" class="order-items">
+                        <!-- Parsed items will be rendered here -->
+                    </div>
+                </section>
+
+                <!-- Payment Section -->
+                <section class="form-section">
+                    <h2 class="section-title">💰 Valores</h2>
+
+                    <div class="form-group">
+                        <label for="total-value">Valor Total *</label>
+                        <div class="input-prefix">
+                            <span class="prefix">R$</span>
+                            <input type="text" id="total-value" class="input-field" 
+                                   placeholder="0,00" required
+                                   oninput="formatCurrency(this)"
+                                   onblur="validateChange()">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="payment-method">Forma de Pagamento</label>
+                        <select id="payment-method" class="input-field" onchange="togglePaymentOptions()">
+                            <option value="PIX">PIX</option>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Cartão">Cartão</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="already-paid" onchange="togglePaymentOptions()">
+                        <label for="already-paid">Pagar na entrega</label>
+                    </div>
+
+                    <div id="change-options" class="hidden">
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="needs-change" onchange="toggleChangeField()">
+                            <label for="needs-change">Precisa de troco</label>
+                        </div>
+
+                        <div id="change-value-group" class="form-group hidden">
+                            <label for="change-value">Valor do Troco *</label>
+                            <div class="input-prefix">
+                                <span class="prefix">R$</span>
+                                <input type="text" id="change-value" class="input-field" 
+                                       placeholder="0,00"
+                                       oninput="formatCurrency(this)"
+                                       onblur="validateChange()">
+                            </div>
+                            <span id="change-error" class="error-message hidden">O troco deve ser maior que o valor total</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Schedule Section -->
+                <section class="form-section">
+                    <h2 class="section-title">⏰ Horário</h2>
+
+                    <div class="form-group">
+                        <label for="delivery-time">Horário</label>
+                        <input type="text" id="delivery-time" class="input-field" 
+                               placeholder="00:00"
+                               oninput="formatTime(this)"
+                               maxlength="5">
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="deliver-tomorrow">
+                        <label for="deliver-tomorrow">Entregar amanhã</label>
+                    </div>
+                </section>
+
+                <!-- Notes Section -->
+                <section class="form-section">
+                    <h2 class="section-title">📝 Observações</h2>
+
+                    <div class="form-group">
+                        <label for="notes">Observações</label>
+                        <textarea id="notes" class="input-field textarea" rows="3"
+                                  placeholder="Observações adicionais..."></textarea>
+                    </div>
+                </section>
+
+                <!-- Live Message Preview -->
+                <section class="form-section">
+                    <h2 class="section-title">👁️ Preview da Mensagem</h2>
+                    <div id="message-preview" class="message-preview">
+                        Preencha os dados para ver a mensagem...
+                    </div>
+                </section>
+
+                <button type="submit" class="btn btn-primary btn-full">💾 Salvar Entrega</button>
+            </form>
+        </div>
+
+        <!-- Screen: Replenishment -->
+        <div id="replenishment-screen" class="screen">
+            <header class="app-header">
+                <h1>Reposição</h1>
+            </header>
+
+            <form id="replenishment-form" class="form">
+                <section class="form-section">
+                    <div class="form-group">
+                        <label for="store-select">Selecione a Loja</label>
+                        <select id="store-select" class="input-field" onchange="loadStoreData()">
+                            <option value="">Selecione...</option>
+                            <option value="marcao">Marcão</option>
+                            <option value="chc">CHC</option>
+                            <option value="ruah">Rua H</option>
+                            <option value="lagoas">Lagoas</option>
+                            <option value="cdd">CDD</option>
+                            <option value="favelao">Favelão</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- Product Categories -->
+                <section class="form-section">
+                    <!-- Ração Cachorro -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('racaoCachorro')">
+                            <div id="racaoCachorroAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🐶</span>
+                            <span class="category-label">Ração Cachorro</span>
+                        </div>
+                        <textarea id="racaoCachorro" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Ração Gato -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('racaoGato')">
+                            <div id="racaoGatoAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🐱</span>
+                            <span class="category-label">Ração Gato</span>
+                        </div>
+                        <textarea id="racaoGato" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Areia -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('areia')">
+                            <div id="areiaAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🕳️</span>
+                            <span class="category-label">Areia</span>
+                        </div>
+                        <textarea id="areia" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Passarinho -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('passarinho')">
+                            <div id="passarinhoAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🦜</span>
+                            <span class="category-label">Passarinho</span>
+                        </div>
+                        <textarea id="passarinho" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Avulsa -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('avulsa')">
+                            <div id="avulsaAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">📦</span>
+                            <span class="category-label">Avulsa</span>
+                        </div>
+                        <textarea id="avulsa" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Sachê -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('sache')">
+                            <div id="sacheAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🥩</span>
+                            <span class="category-label">Sachê</span>
+                        </div>
+                        <textarea id="sache" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Remédio -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('remedio')">
+                            <div id="remedioAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">💊</span>
+                            <span class="category-label">Remédio</span>
+                        </div>
+                        <textarea id="remedio" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Shampoo -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('shampoo')">
+                            <div id="shampooAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🧼</span>
+                            <span class="category-label">Shampoo</span>
+                        </div>
+                        <textarea id="shampoo" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Canaletado -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('canaletado')">
+                            <div id="canaletadoAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">📌</span>
+                            <span class="category-label">Canaletado</span>
+                        </div>
+                        <textarea id="canaletado" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Saco Fechado -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleSacoFechado()">
+                            <div id="sacoFechadoAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">⚖️</span>
+                            <span class="category-label">Saco Fechado</span>
+                        </div>
+                        <div id="sacoFechado-content" class="category-content hidden">
+                            <div class="form-group">
+                                <label>15kg</label>
+                                <textarea id="saco15kg" class="input-field textarea" 
+                                          placeholder="Itens de 15kg..."
+                                          rows="2"
+                                          oninput="updateReplenishmentMessage()"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>10kg</label>
+                                <textarea id="saco10kg" class="input-field textarea" 
+                                          placeholder="Itens de 10kg..."
+                                          rows="2"
+                                          oninput="updateReplenishmentMessage()"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Produtos para Loja -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('produtosLoja')">
+                            <div id="produtosLojaAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🧹</span>
+                            <span class="category-label">Produtos para Loja</span>
+                        </div>
+                        <textarea id="produtosLoja" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+                </section>
+
+                <!-- Message Preview -->
+                <section class="form-section">
+                    <h2 class="section-title">👁️ Preview da Mensagem</h2>
+                    <div id="replenishment-preview" class="message-preview">
+                        Selecione uma loja e adicione itens...
+                    </div>
+                </section>
+
+                <!-- Action Buttons -->
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary" onclick="copyReplenishmentMessage()">
+                        📋 Copiar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="sendReplenishmentWhatsApp()">
+                        📱 Enviar WhatsApp
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Screen: Validity -->
+        <div id="validity-screen" class="screen">
+            <header class="app-header">
+                <h1>📅 Validade</h1>
+                <button class="icon-btn" onclick="showAddValidityModal()">➕</button>
+            </header>
+            
+            <div id="validity-list" class="validity-container">
+                <!-- Validity items will be rendered here -->
+            </div>
+
+            <div id="validity-empty" class="empty-state hidden">
+                <span class="empty-icon">📅</span>
+                <p>Nenhum item cadastrado</p>
+                <button class="btn btn-primary" onclick="showAddValidityModal()">Adicionar Item</button>
+            </div>
+        </div>
+
+        <!-- Add Validity Modal -->
+        <div id="validity-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="validity-modal-title">Adicionar Item</h2>
+                    <button class="close-btn" onclick="closeValidityModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <form id="validity-form" onsubmit="saveValidityItem(event)">
+                        <input type="hidden" id="validity-item-id">
+                        <input type="hidden" id="validity-parent-id">
+                        
+                        <div class="form-group">
+                            <label for="validity-category">Categoria</label>
+                            <input type="text" id="validity-category" class="input-field" 
+                                   list="category-list" placeholder="Digite ou selecione..."
+                                   autocomplete="off" oninput="onCategoryInput()">
+                            <datalist id="category-list"></datalist>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="validity-product">Produto</label>
+                            <input type="text" id="validity-product" class="input-field" 
+                                   list="product-list" placeholder="Digite ou selecione..."
+                                   autocomplete="off" oninput="onProductInput()">
+                            <datalist id="product-list"></datalist>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="validity-variation">Variação/Tamanho</label>
+                            <input type="text" id="validity-variation" class="input-field" 
+                                   list="variation-list" placeholder="Digite ou selecione (ex: 2kg-4kg)..."
+                                   autocomplete="off" oninput="onVariationInput()">
+                            <datalist id="variation-list"></datalist>
+                        </div>
+
+                        <div id="expiration-dates-section">
+                            <div class="form-group">
+                                <label>Quantidade</label>
+                                <input type="number" id="validity-quantity" class="input-field" 
+                                       min="1" value="1" required oninput="onQuantityChange()">
+                            </div>
+                            <div id="same-validity-group" class="form-group checkbox-group hidden">
+                                <input type="checkbox" id="same-validity" checked>
+                                <label for="same-validity">Todos com a mesma validade?</label>
+                            </div>
+                            <div id="single-date-section">
+                                <div class="form-group">
+                                    <label>Data de Validade</label>
+                                    <input type="date" id="validity-date" class="input-field" required>
+                                </div>
+                            </div>
+                            <div id="multiple-dates-section" class="hidden">
+                                <div id="multiple-dates-list"></div>
+                                <button type="button" class="btn btn-secondary btn-small" onclick="addMoreDateFields()">
+                                    ➕ Adicionar outra data
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="existing-dates-section" class="hidden">
+                            <h3>Datas existentes</h3>
+                            <div id="existing-dates-list"></div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary" onclick="closeValidityModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Popup -->
+        <div id="message-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Mensagem</h2>
+                    <button class="close-btn" onclick="closeModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <pre id="modal-message"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="copyMessage()">📋 Copiar</button>
+                    <button class="btn btn-primary" onclick="shareWhatsApp()">📱 WhatsApp</button>
+                    <button class="btn btn-secondary" onclick="shareSMS()">💬 SMS</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirm Delete Dialog -->
+        <div id="confirm-dialog" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Confirmar Exclusão</h2>
+                    <button class="close-btn" onclick="closeConfirmDialog()">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja excluir esta entrega?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeConfirmDialog()">Cancelar</button>
+                    <button class="btn btn-danger" onclick="confirmDelete()">Excluir</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+    <script src="validity.js"></script>
+</body>
+</html>
