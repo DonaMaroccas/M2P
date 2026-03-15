@@ -239,6 +239,15 @@
                     </div>
 
                     <div class="form-group">
+                        <label>Tipo de Pedido</label>
+                        <div class="toggle-group">
+                            <button type="button" id="btn-delivery" class="toggle-btn active" onclick="selectOrderType('delivery')">🚗 Delivery</button>
+                            <button type="button" id="btn-mesa" class="toggle-btn" onclick="selectOrderType('mesa')">🍽️ Mesa/Comanda</button>
+                        </div>
+                        <input type="hidden" id="order-type" value="delivery">
+                    </div>
+
+                    <div class="form-group">
                         <label for="payment-method">Forma de Pagamento</label>
                         <select id="payment-method" class="input-field" onchange="togglePaymentOptions()">
                             <option value="PIX">PIX</option>
@@ -280,12 +289,12 @@
                         <label for="delivery-time">Horário</label>
                         <input type="text" id="delivery-time" class="input-field" 
                                placeholder="00:00"
-                               oninput="formatTime(this)"
+                               oninput="formatTime(this); updateMessagePreview()"
                                maxlength="5">
                     </div>
 
                     <div class="form-group checkbox-group">
-                        <input type="checkbox" id="deliver-tomorrow">
+                        <input type="checkbox" id="deliver-tomorrow" onchange="updateMessagePreview()">
                         <label for="deliver-tomorrow">Entregar amanhã</label>
                     </div>
                 </section>
@@ -317,7 +326,10 @@
         <div id="replenishment-screen" class="screen">
             <header class="app-header">
                 <h1>Reposição</h1>
-                <button class="icon-btn" onclick="reportBug()">🚫</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="icon-btn" onclick="recoverLastReplenishmentList()" title="Recuperar última lista">👁️</button>
+                    <button class="icon-btn" onclick="reportBug()">🚫</button>
+                </div>
             </header>
 
             <form id="replenishment-form" class="form">
@@ -618,6 +630,62 @@
                 <div class="modal-footer">
                     <button class="btn btn-secondary" onclick="closeConfirmDialog()">Cancelar</button>
                     <button class="btn btn-danger" onclick="confirmDelete()">Excluir</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Summary Modal -->
+        <div id="summary-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Gerar Resumo de Vendas</h2>
+                    <button class="close-btn" onclick="closeSummaryModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="summary-store">Selecione a Loja</label>
+                        <select id="summary-store" class="input-field">
+                            <option value="Marcão">Marcão</option>
+                            <option value="CHC">CHC</option>
+                            <option value="Rua H">Rua H</option>
+                            <option value="Lagoas">Lagoas</option>
+                            <option value="CDD">CDD</option>
+                            <option value="Favelão">Favelão</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="summary-observation">Observação (opcional)</label>
+                        <input type="text" id="summary-observation" class="input-field" placeholder="Ex: taxa entrega R$5,00">
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" style="width: 100%;" onclick="generateSalesSummary()">
+                            📊 Gerar Resumo
+                        </button>
+                    </div>
+                    <div id="summary-result-container" class="hidden">
+                        <label>Mensagem Gerada:</label>
+                        <pre id="summary-message"></pre>
+                        <button class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="copySummaryMessage()">
+                            📋 Copiar Mensagem
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Password Dialog for Mesa -->
+        <div id="password-dialog" class="modal hidden">
+            <div class="modal-content" style="max-width: 350px;">
+                <div class="modal-header">
+                    <h2>🔒 Liberar Mesa/Comanda</h2>
+                    <button class="close-btn" onclick="closePasswordDialog()">×</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 15px; color: var(--text-secondary);">Digite a senha para alterar para Mesa/Comanda:</p>
+                    <div class="form-group">
+                        <input type="password" id="mesa-password" class="input-field" placeholder="••••••" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                    </div>
+                    <p id="password-error" class="error-message hidden" style="margin-top: 10px;">Senha Inválida</p>
                 </div>
             </div>
         </div>

@@ -270,13 +270,16 @@ function saveValidityItem(event) {
     }
     
     // Add dates based on selection
+    const validityDateInput = document.getElementById('validity-date');
+    
+    // Validate that at least one date is provided
+    let datesToSave = [];
+    
     if (sameValidity || quantity === 1) {
         // All units have the same validity
-        const validityDate = document.getElementById('validity-date').value;
-        if (validityDate) {
-            variation.dates.push({
-                id: generateId(),
-                date: validityDate,
+        if (validityDateInput && validityDateInput.value) {
+            datesToSave.push({
+                date: validityDateInput.value,
                 quantity: quantity
             });
         }
@@ -285,14 +288,28 @@ function saveValidityItem(event) {
         const dateInputs = document.querySelectorAll('.multi-date-input');
         dateInputs.forEach(input => {
             if (input.value) {
-                variation.dates.push({
-                    id: generateId(),
+                datesToSave.push({
                     date: input.value,
                     quantity: 1
                 });
             }
         });
     }
+    
+    // Check if we have dates to save
+    if (datesToSave.length === 0) {
+        showToast('Adicione pelo menos uma data de validade', 'error');
+        return;
+    }
+    
+    // Add all dates to variation
+    datesToSave.forEach(d => {
+        variation.dates.push({
+            id: generateId(),
+            date: d.date,
+            quantity: d.quantity
+        });
+    });
     
     // Save to localStorage
     localStorage.setItem('deliveryPets_validity', JSON.stringify(validityData));

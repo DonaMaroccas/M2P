@@ -33,14 +33,16 @@ function loadData() {
     // Check if it's a new day and clear deliveries
     const today = new Date().toDateString();
     if (lastDate !== today) {
-        // New day - clear deliveries but keep clients
+        // New day - clear deliveries but keep clients and validity
         deliveries = [];
         localStorage.setItem('deliveryPets_deliveries', JSON.stringify(deliveries));
         localStorage.setItem('deliveryPets_lastDate', today);
-    }
-
-    if (savedDeliveries) {
-        deliveries = JSON.parse(savedDeliveries);
+        console.log('Novo dia detectado. Lista de pedidos foi zerada.');
+    } else {
+        // Same day - load existing deliveries
+        if (savedDeliveries) {
+            deliveries = JSON.parse(savedDeliveries);
+        }
     }
 
     if (savedClients) {
@@ -93,6 +95,64 @@ function saveReplenishment() {
     };
 
     localStorage.setItem('deliveryPets_replenishment', JSON.stringify(replenishment));
+    // Also save as last list for recovery
+    localStorage.setItem('ultima_lista_reposicao', JSON.stringify(replenishment));
+}
+
+function recoverLastReplenishmentList() {
+    const savedList = localStorage.getItem('ultima_lista_reposicao');
+    
+    if (!savedList) {
+        showToast('Nenhuma lista anterior encontrada', 'error');
+        return;
+    }
+    
+    try {
+        const replenishment = JSON.parse(savedList);
+        
+        // Restore store
+        if (replenishment.store) {
+            document.getElementById('store-select').value = replenishment.store;
+        }
+        
+        // Restore all items
+        const fields = [
+            { active: 'racaoCachorroAtivo', value: 'racaoCachorro' },
+            { active: 'racaoGatoAtivo', value: 'racaoGato' },
+            { active: 'areiaAtivo', value: 'areia' },
+            { active: 'passarinhoAtivo', value: 'passarinho' },
+            { active: 'avulsaAtivo', value: 'avulsa' },
+            { active: 'sacheAtivo', value: 'sache' },
+            { active: 'remedioAtivo', value: 'remedio' },
+            { active: 'shampooAtivo', value: 'shampoo' },
+            { active: 'canaletadoAtivo', value: 'canaletado' },
+            { active: 'sacoFechadoAtivo', value: 'saco15kg' },
+            { active: 'sacoFechadoAtivo', value: 'saco10kg' },
+            { active: 'produtosLojaAtivo', value: 'produtosLoja' }
+        ];
+        
+        fields.forEach(field => {
+            const activeEl = document.getElementById(field.active);
+            const valueEl = document.getElementById(field.value);
+            
+            if (activeEl && replenishment[field.active]) {
+                activeEl.classList.add('active');
+            } else if (activeEl) {
+                activeEl.classList.remove('active');
+            }
+            
+            if (valueEl && replenishment[field.value] !== undefined) {
+                valueEl.value = replenishment[field.value];
+            }
+        });
+        
+        // Update preview
+        updateReplenishmentMessage();
+        
+        showToast('Lista anterior recuperada com sucesso!', 'success');
+    } catch (e) {
+        showToast('Erro ao recuperar lista anterior', 'error');
+    }
 }
 
 // ========================================
@@ -157,6 +217,9 @@ function showNewDeliveryForm() {
     selectedClientId = null;
     orderItems = [];
     
+    // Reset order type to Delivery
+    setOrderType('delivery');
+    
     // Reset loja unica
     document.getElementById('loja-unica').checked = false;
     document.getElementById('loja-unica-section').classList.add('hidden');
@@ -200,6 +263,9 @@ function editDelivery(deliveryId) {
     
     // Fill order description
     document.getElementById('order-description').value = delivery.pedido || '';
+    
+    // Fill order type (delivery or mesa)
+    setOrderType(delivery.tipo || 'delivery');
     
     // Load order items with store selections
     if (delivery.itensPedido && delivery.itensPedido.length > 0) {
@@ -511,9 +577,8 @@ function parseOrderItems() {
                 currentOrder++;
             }
             
-            // Preserve existing store selection if available
-            const existingItem = newOrderItems[newOrderItems.length - 1];
-            const preservedStore = existingItem ? existingItem.store : '';
+            // Preserve existing store selection if available (from original orderItems array)
+            const preservedStore = orderItems[newOrderItems.length] ? orderItems[newOrderItems.length].store : '';
             
             newOrderItems.push({
                 order: itemOrder,
@@ -572,7 +637,19 @@ function updateItemText(index, text) {
     if (orderItems[index]) {
         orderItems[index].text = text;
     }
+    // Sync orderItems back to description textarea
+    syncDescriptionFromOrderItems();
     updateMessagePreview();
+}
+
+function syncDescriptionFromOrderItems() {
+    const descriptionField = document.getElementById('order-description');
+    if (descriptionField && orderItems.length > 0) {
+        const text = orderItems.map((item, index) => {
+            return `${index + 1}. ${item.text || ''}`;
+        }).join('\n');
+        descriptionField.value = text;
+    }
 }
 
 // ========================================
@@ -653,6 +730,7 @@ function generateDeliveryMessage() {
     const description = document.getElementById('order-description').value;
     const pickupLocation = document.getElementById('pickup-location').value;
     const totalValue = document.getElementById('total-value').value;
+    const orderType = document.getElementById('order-type').value;
     const paymentMethod = document.getElementById('payment-method').value;
     const alreadyPaid = document.getElementById('already-paid').checked;
     const needsChange = document.getElementById('needs-change').checked;
@@ -660,6 +738,18 @@ function generateDeliveryMessage() {
     const deliveryTime = document.getElementById('delivery-time').value;
     const deliverTomorrow = document.getElementById('deliver-tomorrow').checked;
     const notes = document.getElementById('notes').value;
+    
+    // Calculate tomorrow's date if deliverTomorrow is checked
+    let tomorrowDate = '';
+    if (deliverTomorrow) {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const day = String(tomorrow.getDate()).padStart(2, '0');
+        const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const year = tomorrow.getFullYear();
+        tomorrowDate = `${day}/${month}/${year}`;
+    }
     
     let message = '';
     
@@ -670,21 +760,40 @@ function generateDeliveryMessage() {
     // Order
     const lojaUnica = document.getElementById('loja-unica').checked;
     message += '\n📦 Pedido:\n';
+    
     if (description) {
-        const lines = description.split('\n');
-        let itemIndex = 0;
-        lines.forEach((line) => {
-            if (line.trim()) {
-                let store = '';
-                if (lojaUnica) {
-                    store = pickupLocation ? ` (${pickupLocation})` : '';
-                } else if (orderItems[itemIndex] && orderItems[itemIndex].store) {
-                    store = ` (${orderItems[itemIndex].store})`;
+        const lines = description.split('\n').filter(line => line.trim());
+        
+        if (lojaUnica) {
+            // Single store for all items
+            lines.forEach((line, index) => {
+                if (line.trim()) {
+                    const storeText = pickupLocation ? ` - Retirar em: ${pickupLocation}` : '';
+                    message += `${index + 1}. ${line.trim()}${storeText}\n`;
                 }
-                message += `${itemIndex + 1}. ${line.trim()}${store}\n`;
-                itemIndex++;
-            }
-        });
+            });
+        } else {
+            // Each item has its own store - read directly from dropdowns in the DOM
+            const dropdowns = document.querySelectorAll('.item-store-select');
+            
+            lines.forEach((line, index) => {
+                if (line.trim()) {
+                    let store = '';
+                    
+                    // Try to get store from dropdown first (most reliable - reads current UI state)
+                    if (dropdowns[index] && dropdowns[index].value) {
+                        store = ` - Retirar em: ${dropdowns[index].value}`;
+                    } else if (orderItems[index] && orderItems[index].store) {
+                        // Fallback to orderItems array
+                        store = ` - Retirar em: ${orderItems[index].store}`;
+                    } else {
+                        store = ' - [Loja não selecionada]';
+                    }
+                    
+                    message += `${index + 1}. ${line.trim()}${store}\n`;
+                }
+            });
+        }
     } else {
         message += '[itens do pedido]\n';
     }
@@ -713,8 +822,18 @@ function generateDeliveryMessage() {
     }
     if (deliverTomorrow) {
         schedule += schedule ? ' - ' : '';
-        schedule += 'Entregar amanhã';
+        schedule += 'Amanhã';
     }
+    
+    // Add delivery date (for Delivery type only)
+    if (orderType !== 'mesa') {
+        if (deliverTomorrow && tomorrowDate) {
+            message += `📅 Data de Entrega: ${tomorrowDate}\n`;
+        } else {
+            message += `📅 Data de Entrega: Hoje\n`;
+        }
+    }
+    
     message += `\n⏰ Horário: ${schedule || '[horário]'}\n`;
     
     // Notes
@@ -756,6 +875,7 @@ function saveDelivery(event) {
     const description = document.getElementById('order-description').value;
     const pickupLocation = document.getElementById('pickup-location').value;
     const totalValue = document.getElementById('total-value').value;
+    const orderType = document.getElementById('order-type').value;
     const paymentMethod = document.getElementById('payment-method').value;
     const alreadyPaid = document.getElementById('already-paid').checked;
     const needsChange = document.getElementById('needs-change').checked;
@@ -800,6 +920,7 @@ function saveDelivery(event) {
         itensPedido: orderItems, // Save the structured order items with store info
         retirada: pickupLocation,
         valor: totalValue,
+        tipo: orderType,
         pagamento: paymentMethod,
         pagarNaEntrega: alreadyPaid,
         precisaTroco: needsChange,
@@ -833,8 +954,279 @@ function saveDelivery(event) {
 }
 
 // ========================================
-// Render Deliveries
+// Order Type Toggle Functions
 // ========================================
+
+function selectOrderType(type) {
+    if (type === 'mesa') {
+        // Show password dialog for Mesa
+        showPasswordDialogForForm();
+    } else {
+        // Direct switch to Delivery
+        setOrderType('delivery');
+    }
+}
+
+function setOrderType(type) {
+    document.getElementById('order-type').value = type;
+    document.getElementById('btn-delivery').classList.toggle('active', type === 'delivery');
+    document.getElementById('btn-mesa').classList.toggle('active', type === 'mesa');
+    
+    // Toggle address field visibility based on type
+    const addressSection = document.querySelector('#client-address').closest('.form-group');
+    const referenceSection = document.querySelector('#client-reference').closest('.form-group');
+    
+    if (type === 'mesa') {
+        if (addressSection) addressSection.classList.add('hidden');
+        if (referenceSection) referenceSection.classList.add('hidden');
+    } else {
+        if (addressSection) addressSection.classList.remove('hidden');
+        if (referenceSection) referenceSection.classList.remove('hidden');
+    }
+    
+    updateMessagePreview();
+}
+
+function showPasswordDialogForForm() {
+    document.getElementById('mesa-password').value = '';
+    document.getElementById('password-error').classList.add('hidden');
+    document.getElementById('password-dialog').classList.remove('hidden');
+    
+    const passwordInput = document.getElementById('mesa-password');
+    passwordInput.focus();
+    
+    passwordInput.oninput = function() {
+        this.value = this.value.replace(/[^0-9]/g, '');
+        if (this.value.length === 6) {
+            validateMesaPasswordForForm();
+        }
+    };
+}
+
+function validateMesaPasswordForForm() {
+    const password = document.getElementById('mesa-password').value;
+    const correctPassword = '258137';
+    
+    if (password === correctPassword) {
+        setOrderType('mesa');
+        closePasswordDialog();
+        showToast('Modo Mesa/Comanda ativado', 'success');
+    } else {
+        document.getElementById('mesa-password').value = '';
+        document.getElementById('password-error').classList.remove('hidden');
+        // Reset to delivery on wrong password
+        setOrderType('delivery');
+    }
+}
+
+function toggleDeliveryType(deliveryId) {
+    const delivery = deliveries.find(d => d.id === deliveryId);
+    if (!delivery) return;
+    
+    const isCurrentlyMesa = delivery.tipo === 'mesa';
+    
+    // If changing from Mesa to Delivery, no password needed
+    if (isCurrentlyMesa) {
+        delivery.tipo = 'delivery';
+        saveData();
+        renderDeliveries();
+        showToast('Pedido alterado para Delivery', 'success');
+        return;
+    }
+    
+    // Changing from Delivery to Mesa - require password
+    showPasswordDialog(deliveryId);
+}
+
+function showPasswordDialog(deliveryId) {
+    window._pendingMesaDeliveryId = deliveryId;
+    document.getElementById('mesa-password').value = '';
+    document.getElementById('password-error').classList.add('hidden');
+    document.getElementById('password-dialog').classList.remove('hidden');
+    
+    // Focus and show keyboard
+    const passwordInput = document.getElementById('mesa-password');
+    passwordInput.focus();
+    
+    // Add input listener for auto-validation
+    passwordInput.oninput = function() {
+        // Only allow numeric input
+        this.value = this.value.replace(/[^0-9]/g, '');
+        
+        // Auto-submit when 6 digits entered
+        if (this.value.length === 6) {
+            validateMesaPassword();
+        }
+    };
+}
+
+function closePasswordDialog() {
+    document.getElementById('password-dialog').classList.add('hidden');
+    window._pendingMesaDeliveryId = null;
+}
+
+function validateMesaPassword() {
+    const password = document.getElementById('mesa-password').value;
+    const correctPassword = '258137';
+    
+    // Auto-validate when 6 digits are entered
+    if (password.length === 6) {
+        if (password === correctPassword) {
+            // Password correct - change to Mesa
+            const deliveryId = window._pendingMesaDeliveryId;
+            const delivery = deliveries.find(d => d.id === deliveryId);
+            if (delivery) {
+                delivery.tipo = 'mesa';
+                saveData();
+                renderDeliveries();
+                showToast('Pedido alterado para Mesa/Comanda', 'success');
+            }
+            closePasswordDialog();
+        } else {
+            // Password incorrect - clear and show error
+            document.getElementById('mesa-password').value = '';
+            document.getElementById('password-error').classList.remove('hidden');
+        }
+    }
+}
+
+function confirmMesaPassword() {
+    const password = document.getElementById('mesa-password').value;
+    const correctPassword = '258137';
+    
+    if (password === correctPassword) {
+        // Password correct - change to Mesa
+        const deliveryId = window._pendingMesaDeliveryId;
+        const delivery = deliveries.find(d => d.id === deliveryId);
+        if (delivery) {
+            delivery.tipo = 'mesa';
+            saveData();
+            renderDeliveries();
+            showToast('Pedido alterado para Mesa/Comanda', 'success');
+        }
+        closePasswordDialog();
+    } else {
+        // Password incorrect - show error
+        document.getElementById('password-error').classList.remove('hidden');
+    }
+}
+
+// Initialize pending delivery ID variable
+window._pendingMesaDeliveryId = null;
+
+// Add Enter key listener for password dialog
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.getElementById('mesa-password');
+    if (passwordInput) {
+        // Auto-validate when 6 digits are entered
+        passwordInput.addEventListener('input', function(e) {
+            // Only allow numeric input
+            this.value = this.value.replace(/[^0-9]/g, '');
+            
+            // Auto-submit when 6 digits entered
+            if (this.value.length === 6) {
+                validateMesaPassword();
+            }
+        });
+        
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                validateMesaPassword();
+            }
+        });
+    }
+});
+
+function copySalesSummary() {
+    // Open the summary modal instead of directly copying
+    showSummaryModal();
+}
+
+function showSummaryModal() {
+    const modal = document.getElementById('summary-modal');
+    const resultContainer = document.getElementById('summary-result-container');
+    const summaryStore = document.getElementById('summary-store');
+    const summaryObservation = document.getElementById('summary-observation');
+    
+    // Reset fields
+    summaryStore.value = 'Marcão';
+    summaryObservation.value = '';
+    resultContainer.classList.add('hidden');
+    
+    modal.classList.remove('hidden');
+}
+
+function closeSummaryModal() {
+    document.getElementById('summary-modal').classList.add('hidden');
+}
+
+function generateSalesSummary() {
+    const totals = window._currentTotals;
+    if (!totals) {
+        showToast('Erro ao gerar resumo', 'error');
+        return;
+    }
+    
+    const store = document.getElementById('summary-store').value;
+    const observation = document.getElementById('summary-observation').value.trim();
+    
+    // Build Delivery section - only show if there are delivery sales
+    let deliveryData = '';
+    if (totals.totalDelivery > 0) {
+        const deliveryParts = [];
+        if (totals.totalCartao > 0) {
+            deliveryParts.push(`Crédito R$ ${totals.totalCartao.toFixed(2)}`);
+            deliveryParts.push(`Débito R$ ${totals.totalCartao.toFixed(2)}`);
+        }
+        if (totals.totalPix > 0) {
+            deliveryParts.push(`Pix R$ ${totals.totalPix.toFixed(2)}`);
+        }
+        if (deliveryParts.length > 0) {
+            deliveryData = `Vendas Delivery: ${deliveryParts.join(' • ')}`;
+        }
+    }
+    
+    // Build Mesa section - only show if there are mesa sales
+    let mesaData = '';
+    if (totals.totalMesa > 0) {
+        const mesaParts = [];
+        if (totals.totalMesaCartao > 0) {
+            mesaParts.push(`Crédito R$ ${totals.totalMesaCartao.toFixed(2)}`);
+            mesaParts.push(`Débito R$ ${totals.totalMesaCartao.toFixed(2)}`);
+        }
+        if (totals.totalMesaPix > 0) {
+            mesaParts.push(`Pix R$ ${totals.totalMesaPix.toFixed(2)}`);
+        }
+        if (mesaParts.length > 0) {
+            mesaData = ` | Mesa: ${mesaParts.join(' • ')}`;
+        }
+    }
+    
+    // Build final message
+    let message;
+    if (observation) {
+        message = `Fechamento ${store}: ${observation} (${deliveryData}${mesaData})`;
+    } else {
+        message = `Fechamento ${store}: (${deliveryData}${mesaData})`;
+    }
+    
+    // Display the message
+    const resultContainer = document.getElementById('summary-result-container');
+    const summaryMessage = document.getElementById('summary-message');
+    summaryMessage.textContent = message;
+    resultContainer.classList.remove('hidden');
+    
+    // Store message for copying
+    window._currentSummaryMessage = message;
+}
+
+function copySummaryMessage() {
+    const message = window._currentSummaryMessage;
+    if (message) {
+        copyToClipboard(message);
+        showToast('Mensagem copiada!', 'success');
+    }
+}
 
 function renderDeliveries() {
     const container = document.getElementById('deliveries-list');
@@ -853,28 +1245,51 @@ function renderDeliveries() {
     
     emptyState.classList.add('hidden');
     
-    // Calculate totals by payment method
+    // Calculate totals by payment method and type
     let totalDinheiro = 0;
     let totalCartao = 0;
     let totalPix = 0;
+    let totalMesaDinheiro = 0;
+    let totalMesaCartao = 0;
+    let totalMesaPix = 0;
     
     sortedDeliveries.forEach(d => {
         const valor = parseCurrency(d.valor) || 0;
-        if (d.pagamento === 'Dinheiro') {
-            totalDinheiro += valor;
-        } else if (d.pagamento === 'Cartão') {
-            totalCartao += valor;
-        } else if (d.pagamento === 'PIX') {
-            totalPix += valor;
+        const isMesa = d.tipo === 'mesa';
+        
+        if (isMesa) {
+            // Mesa/Comanda - separate by payment method
+            if (d.pagamento === 'Dinheiro') {
+                totalMesaDinheiro += valor;
+            } else if (d.pagamento === 'Cartão') {
+                totalMesaCartao += valor;
+            } else if (d.pagamento === 'PIX') {
+                totalMesaPix += valor;
+            }
+        } else {
+            // Delivery - separate by payment method
+            if (d.pagamento === 'Dinheiro') {
+                totalDinheiro += valor;
+            } else if (d.pagamento === 'Cartão') {
+                totalCartao += valor;
+            } else if (d.pagamento === 'PIX') {
+                totalPix += valor;
+            }
         }
     });
     
-    const totalGeral = totalDinheiro + totalCartao + totalPix;
+    const totalDelivery = totalDinheiro + totalCartao + totalPix;
+    const totalMesa = totalMesaDinheiro + totalMesaCartao + totalMesaPix;
+    const totalGeral = totalDelivery + totalMesa;
     
     const totalsHTML = `
         <div class="totals-section">
             <div class="totals-title">💰 TOTAL VENDIDO HOJE</div>
             <div class="totals-grid">
+                <div class="total-item">
+                    <span class="total-label">🚗 Delivery</span>
+                    <span class="total-value">R$ ${totalDelivery.toFixed(2).replace('.', ',')}</span>
+                </div>
                 <div class="total-item">
                     <span class="total-label">💵 Dinheiro</span>
                     <span class="total-value">R$ ${totalDinheiro.toFixed(2).replace('.', ',')}</span>
@@ -887,13 +1302,33 @@ function renderDeliveries() {
                     <span class="total-label">📱 Pix</span>
                     <span class="total-value">R$ ${totalPix.toFixed(2).replace('.', ',')}</span>
                 </div>
+                <div class="total-item">
+                    <span class="total-label">🍽️ Mesa/Comanda</span>
+                    <span class="total-value">R$ ${totalMesa.toFixed(2).replace('.', ',')}</span>
+                </div>
                 <div class="total-item total-geral">
                     <span class="total-label">🤑 TOTAL</span>
                     <span class="total-value">R$ ${totalGeral.toFixed(2).replace('.', ',')}</span>
                 </div>
             </div>
+            <button class="btn btn-secondary" style="margin-top: 15px; width: 100%;" onclick="showSummaryModal()">
+                📋 Gerar Resumo de Vendas
+            </button>
         </div>
     `;
+    
+    // Store totals for summary generation
+    window._currentTotals = {
+        totalDinheiro,
+        totalCartao,
+        totalPix,
+        totalMesaDinheiro,
+        totalMesaCartao,
+        totalMesaPix,
+        totalDelivery,
+        totalMesa,
+        totalGeral
+    };
     
     container.innerHTML = sortedDeliveries.map(delivery => {
         let schedule = delivery.horario || '';
@@ -902,15 +1337,25 @@ function renderDeliveries() {
             schedule += 'Amanhã';
         }
         
+        const isMesa = delivery.tipo === 'mesa';
+        const cardClass = isMesa ? 'delivery-card delivery-mesa' : 'delivery-card';
+        const typeIcon = isMesa ? '🍽️' : '🚗';
+        const typeLabel = isMesa ? 'Mesa' : 'Delivery';
+        
         return `
-            <div class="delivery-card" onclick="showDeliveryMessage('${delivery.id}')">
+            <div class="${cardClass}" onclick="showDeliveryMessage('${delivery.id}')">
                 <div class="card-header">
-                    <span class="card-client">${delivery.nome}</span>
+                    <div class="card-header-left">
+                        <button class="type-toggle-btn" onclick="event.stopPropagation(); toggleDeliveryType('${delivery.id}')" title="Alternar Delivery/Mesa">
+                            ${typeIcon}
+                        </button>
+                        <span class="card-client">${delivery.nome}</span>
+                    </div>
                     <span class="card-value">R$ ${delivery.valor}</span>
                 </div>
-                <div class="card-address">
+                ${!isMesa ? `<div class="card-address">
                     📍 ${delivery.endereco}
-                </div>
+                </div>` : ''}
                 ${renderDeliveryItems(delivery)}
                 <div class="card-time">
                     ⏰ ${schedule || 'Sem horário'}
@@ -994,7 +1439,7 @@ function showDeliveryMessage(deliveryId) {
     if (delivery.itensPedido && delivery.itensPedido.length > 0) {
         message += `\n📦 Pedido:\n`;
         delivery.itensPedido.forEach((item, index) => {
-            const storeInfo = item.store ? ` (${item.store})` : '';
+            const storeInfo = item.store ? ` - Retirar em: ${item.store}` : ' - [Loja não selecionada]';
             message += `${index + 1}. ${item.text}${storeInfo}\n`;
         });
     } else if (delivery.pedido) {
@@ -1080,7 +1525,7 @@ function copyDeliveryMessage(deliveryId) {
     if (delivery.itensPedido && delivery.itensPedido.length > 0) {
         message += `\n📦 Pedido:\n`;
         delivery.itensPedido.forEach((item, index) => {
-            const storeInfo = item.store ? ` (${item.store})` : '';
+            const storeInfo = item.store ? ` - Retirar em: ${item.store}` : ' - [Loja não selecionada]';
             message += `${index + 1}. ${item.text}${storeInfo}\n`;
         });
     } else if (delivery.pedido) {
@@ -1132,7 +1577,14 @@ function shareDeliveryWhatsApp(deliveryId) {
     message += `👤 Cliente: ${delivery.nome}\n`;
     message += `📞 Telefone: ${delivery.telefone || 'Sem telefone'}\n`;
     
-    if (delivery.pedido) {
+    // Use structured items if available, otherwise fallback to plain text
+    if (delivery.itensPedido && delivery.itensPedido.length > 0) {
+        message += `\n📦 Pedido:\n`;
+        delivery.itensPedido.forEach((item, index) => {
+            const storeInfo = item.store ? ` - Retirar em: ${item.store}` : ' - [Loja não selecionada]';
+            message += `${index + 1}. ${item.text}${storeInfo}\n`;
+        });
+    } else if (delivery.pedido) {
         message += `\n📦 Pedido:\n${delivery.pedido}\n`;
     }
     
@@ -1541,6 +1993,15 @@ function deleteClient() {
 document.addEventListener('DOMContentLoaded', () => {
     loadData();
     initNavigation();
+    
+    // Listen for changes in the description textarea to sync with orderItems
+    const descriptionField = document.getElementById('order-description');
+    if (descriptionField) {
+        descriptionField.addEventListener('input', () => {
+            // Parse items when user types in description textarea
+            parseOrderItems();
+        });
+    }
     
     // Close clients modal when clicking outside
     document.getElementById('clients-modal').addEventListener('click', (e) => {
