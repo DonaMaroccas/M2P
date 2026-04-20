@@ -1499,3 +1499,32 @@ body {
         width: 100%;
     }
 }
+
+/* Dropdown Menu - Banho e Tosa */
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1002;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-top: 4px;
+}
+
+.dropdown-menu .dropdown-item:hover {
+    background: var(--bg-input);
+}
+
+.dropdown-item {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dropdown-item:hover {
+    background: var(--bg-input);
+}

@@ -106,9 +106,9 @@
                 <span class="nav-icon">🔄</span>
                 <span class="nav-label">Reposição</span>
             </button>
-            <button class="nav-btn" data-screen="validity">
-                <span class="nav-icon">📅</span>
-                <span class="nav-label">Validade</span>
+            <button class="nav-btn" data-screen="bathgroom">
+                <span class="nav-icon">✂️</span>
+                <span class="nav-label">Banho e Tosa</span>
             </button>
         </nav>
 
@@ -181,6 +181,11 @@
                     <div class="form-group">
                         <label for="client-reference">Ponto de Referência *</label>
                         <input type="text" id="client-reference" class="input-field" required>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="include-maps-link" checked>
+                        <label for="include-maps-link">Incluir Link do Mapa</label>
                     </div>
 
                     <div class="form-group checkbox-group">
@@ -427,12 +432,12 @@
                                   rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
                     </div>
 
-                    <!-- Shampoo -->
+                    <!-- Canaletado -->
                     <div class="category-group">
-                        <div class="category-header" onclick="toggleCategory('shampoo')">
-                            <div id="shampooAtivo" class="toggle-switch"></div>
-                            <span class="category-icon">🧼</span>
-                            <span class="category-label">Shampoo</span>
+                        <div class="category-header" onclick="toggleCategory('canaletado')">
+                            <div id="canaletadoAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">📌</span>
+                            <span class="category-label">Canaletado</span>
                         </div>
                         <textarea id="shampoo" class="input-field textarea category-content hidden" 
                                   rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
@@ -506,94 +511,163 @@
             </form>
         </div>
 
-        <!-- Screen: Validity -->
-        <div id="validity-screen" class="screen">
+        <!-- Screen: Banho e Tosa -->
+        <div id="bathgroom-screen" class="screen">
             <header class="app-header">
-                <h1>📅 Validade</h1>
+                <h1>✂️ Banho e Tosa</h1>
                 <button class="icon-btn" onclick="reportBug()">🚫</button>
-                <button class="icon-btn" onclick="showAddValidityModal()">➕</button>
+                <button class="icon-btn" onclick="showBathgroomForm()">➕</button>
             </header>
-            
-            <div id="validity-list" class="validity-container">
-                <!-- Validity items will be rendered here -->
+
+            <!-- Lista de Agendamentos -->
+            <div id="bathgroom-list" class="deliveries-container">
+                <!-- Agendamentos serão renderizados aqui -->
             </div>
 
-            <div id="validity-empty" class="empty-state hidden">
-                <span class="empty-icon">📅</span>
-                <p>Nenhum item cadastrado</p>
-                <button class="btn btn-primary" onclick="showAddValidityModal()">Adicionar Item</button>
+            <div id="bathgroom-empty" class="empty-state hidden">
+                <span class="empty-icon">✂️</span>
+                <p>Nenhum agendamento cadastrado</p>
+                <button class="btn btn-primary" onclick="showBathgroomForm()">Novo Agendamento</button>
             </div>
         </div>
 
-        <!-- Add Validity Modal -->
-        <div id="validity-modal" class="modal hidden">
-            <div class="modal-content">
+        <!-- Modal: Formulário Banho e Tosa -->
+        <div id="bathgroom-modal" class="modal hidden" style="z-index: 1001;">
+            <div class="modal-content" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
                 <div class="modal-header">
-                    <h2 id="validity-modal-title">Adicionar Item</h2>
-                    <button class="close-btn" onclick="closeValidityModal()">×</button>
+                    <h2 id="bathgroom-form-title">✂️ Novo Agendamento</h2>
+                    <button class="close-btn" onclick="closeBathgroomModal()">×</button>
                 </div>
                 <div class="modal-body">
-                    <form id="validity-form" onsubmit="saveValidityItem(event)">
-                        <input type="hidden" id="validity-item-id">
-                        <input type="hidden" id="validity-parent-id">
-                        
-                        <div class="form-group">
-                            <label for="validity-category">Categoria</label>
-                            <input type="text" id="validity-category" class="input-field" 
-                                   list="category-list" placeholder="Digite ou selecione..."
-                                   autocomplete="off" oninput="onCategoryInput()">
-                            <datalist id="category-list"></datalist>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="validity-product">Produto</label>
-                            <input type="text" id="validity-product" class="input-field" 
-                                   list="product-list" placeholder="Digite ou selecione..."
-                                   autocomplete="off" oninput="onProductInput()">
-                            <datalist id="product-list"></datalist>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="validity-variation">Variação/Tamanho</label>
-                            <input type="text" id="validity-variation" class="input-field" 
-                                   list="variation-list" placeholder="Digite ou selecione (ex: 2kg-4kg)..."
-                                   autocomplete="off" oninput="onVariationInput()">
-                            <datalist id="variation-list"></datalist>
-                        </div>
-
-                        <div id="expiration-dates-section">
+                    <form id="bathgroom-form" class="form">
+                        <section class="form-section">
+                            <h2 class="section-title">👤 Dados do Cliente</h2>
+                            
                             <div class="form-group">
-                                <label>Quantidade</label>
-                                <input type="number" id="validity-quantity" class="input-field" 
-                                       min="1" value="1" required oninput="onQuantityChange()">
+                                <label for="bt-cliente">Cliente *</label>
+                                <div style="position: relative;">
+                                    <input type="text" id="bt-cliente-search" class="input-field" 
+                                           placeholder="Buscar cliente..."
+                                           oninput="searchBTClient(this.value)"
+                                           autocomplete="off">
+                                    <div id="bt-client-dropdown" class="dropdown-menu hidden" style="position: absolute; top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto; z-index: 1002; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 4px; display: none;">
+                                        <!-- Client options will be rendered here -->
+                                    </div>
+                                </div>
+                                <input type="hidden" id="bt-cliente">
                             </div>
-                            <div id="same-validity-group" class="form-group checkbox-group hidden">
-                                <input type="checkbox" id="same-validity" checked>
-                                <label for="same-validity">Todos com a mesma validade?</label>
+
+                            <div class="form-group">
+                                <label for="bt-telefone">Telefone *</label>
+                                <input type="tel" id="bt-telefone" class="input-field" 
+                                       placeholder="(00)00000-0000" required
+                                       oninput="formatBTPhone(this)">
                             </div>
-                            <div id="single-date-section">
+
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="bt-save-client">
+                                <label for="bt-save-client">Salvar/Atualizar cliente</label>
+                            </div>
+                        </section>
+
+                        <section class="form-section">
+                            <h2 class="section-title">🐶🐱 Dados do Pet</h2>
+                            
+                            <div class="form-group">
+                                <label for="bt-pet-nome">Nome do Pet *</label>
+                                <input type="text" id="bt-pet-nome" class="input-field" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bt-pet-raca">Raça</label>
+                                <input type="text" id="bt-pet-raca" class="input-field" placeholder="Raça do pet">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bt-pet-porte">Porte</label>
+                                <select id="bt-pet-porte" class="input-field">
+                                    <option value="">Selecione...</option>
+                                    <option value="RP">RP</option>
+                                    <option value="RMG">RMG</option>
+                                </select>
+                            </div>
+                        </section>
+
+                        <section class="form-section">
+                            <h2 class="section-title">✂️ Serviço</h2>
+                            
+                            <div class="form-group">
+                                <label for="bt-servico">Serviço</label>
+                                <input type="text" id="bt-servico" class="input-field" placeholder="Serviço a ser realizado">
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="bt-taxidog" onchange="toggleBTAddress()">
+                                <label for="bt-taxidog">🚐 TaxiDog</label>
+                            </div>
+
+                            <div id="bt-address-section" class="hidden">
                                 <div class="form-group">
-                                    <label>Data de Validade</label>
-                                    <input type="date" id="validity-date" class="input-field" required>
+                                    <label for="bt-endereco">Endereço</label>
+                                    <input type="text" id="bt-endereco" class="input-field" placeholder="Endereço">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="bt-referencia">Ponto de Referência</label>
+                                    <input type="text" id="bt-referencia" class="input-field" placeholder="Ponto de referência">
+                                </div>
+
+                                <div class="form-group checkbox-group">
+                                    <input type="checkbox" id="bt-include-maps" checked>
+                                    <label for="bt-include-maps">Incluir Localização</label>
                                 </div>
                             </div>
-                            <div id="multiple-dates-section" class="hidden">
-                                <div id="multiple-dates-list"></div>
-                                <button type="button" class="btn btn-secondary btn-small" onclick="addMoreDateFields()">
-                                    ➕ Adicionar outra data
-                                </button>
+                        </section>
+
+                        <section class="form-section">
+                            <h2 class="section-title">💰 Valores</h2>
+                            
+                            <div class="form-group">
+                                <label for="bt-valor">Valor</label>
+                                <div class="input-prefix">
+                                    <span class="prefix">R$</span>
+                                    <input type="text" id="bt-valor" class="input-field" 
+                                           placeholder="0,00"
+                                           oninput="formatBTCurrency(this)">
+                                </div>
                             </div>
-                        </div>
 
-                        <div id="existing-dates-section" class="hidden">
-                            <h3>Datas existentes</h3>
-                            <div id="existing-dates-list"></div>
-                        </div>
+                            <div class="form-group">
+                                <label for="bt-data">Data</label>
+                                <input type="date" id="bt-data" class="input-field">
+                            </div>
 
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-secondary" onclick="closeValidityModal()">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">Salvar</button>
-                        </div>
+                            <div class="form-group">
+                                <label for="bt-horario">Horário</label>
+                                <input type="text" id="bt-horario" class="input-field" 
+                                       placeholder="00:00"
+                                       oninput="formatBTTime(this)"
+                                       maxlength="5">
+                            </div>
+                        </section>
+
+                        <section class="form-section">
+                            <h2 class="section-title">📝 Observações</h2>
+                            
+                            <div class="form-group">
+                                <label for="bt-observacoes">Observações</label>
+                                <textarea id="bt-observacoes" class="input-field textarea" rows="3"
+                                          placeholder="Observações adicionais..."></textarea>
+                            </div>
+                        </section>
+
+                        <button type="button" class="btn btn-primary btn-full" onclick="copyBathgroomSchedule()">
+                            📋 Copiar
+                        </button>
+
+                        <button type="button" class="btn btn-secondary btn-full" style="margin-top: 10px;" onclick="saveBathgroomSchedule()">
+                            💾 Salvar Agendamento
+                        </button>
                     </form>
                 </div>
             </div>
@@ -696,6 +770,5 @@
 
     <script src="config.js"></script>
     <script src="app.js"></script>
-    <script src="validity.js"></script>
 </body>
 </html>
