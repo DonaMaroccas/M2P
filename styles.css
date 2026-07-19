@@ -177,6 +177,23 @@ body {
     color: var(--text-primary);
 }
 
+.faq-answer ol {
+    margin: 0;
+    padding: 0 var(--spacing-lg) var(--spacing-lg) calc(var(--spacing-lg) + 18px);
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.faq-answer li {
+    margin-bottom: var(--spacing-xs);
+}
+
+.faq-answer em {
+    color: var(--text-secondary);
+    opacity: 0.85;
+}
+
 /* ========================================
    Navigation
    ======================================== */
