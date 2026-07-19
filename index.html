@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Pets</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Screen: Home -->
+        <div id="home-screen" class="screen active">
+            <header class="app-header home-header">
+                <h1>🐾 Delivery Pets</h1>
+                <button class="icon-btn" onclick="reportBug()">🚫</button>
+                <button class="icon-btn" onclick="showClientsModal()">👥</button>
+            </header>
+            
+            <div class="home-options">
+                <div class="home-card" onclick="navigateTo('replenishment')">
+                    <span class="home-card-icon">🔄</span>
+                    <span class="home-card-title">Reposição</span>
+                    <span class="home-card-desc">Criar lista de reposição</span>
+                </div>
+                
+                <div class="home-card" onclick="navigateTo('deliveries')">
+                    <span class="home-card-icon">📦</span>
+                    <span class="home-card-title">Pedidos</span>
+                    <span class="home-card-desc">Gerenciar entregas</span>
+                </div>
+
+                <div class="home-card" onclick="navigateTo('bathgroom')">
+                    <span class="home-card-icon">✂️</span>
+                    <span class="home-card-title">Banho e Tosa</span>
+                    <span class="home-card-desc">Agendar banho e tosa</span>
+                </div>
+             </div>
+        </div>
+
+        <!-- Clients Modal -->
+        <div id="clients-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Clientes Salvos</h2>
+                    <button class="close-btn" onclick="closeClientsModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <input type="text" id="client-filter" class="input-field" 
+                               placeholder="Buscar cliente..." 
+                               oninput="filterClients(this.value)">
+                    </div>
+                    <div id="clients-list" class="clients-list">
+                        <!-- Clients will be rendered here -->
+                    </div>
+                    <div id="no-clients" class="empty-state hidden">
+                        <span class="empty-icon">👥</span>
+                        <p>Nenhum cliente encontrado</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Client Modal -->
+        <div id="edit-client-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Editar Cliente</h2>
+                    <button class="close-btn" onclick="closeEditClientModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-client-form">
+                        <input type="hidden" id="edit-client-id">
+                        <div class="form-group">
+                            <label>Nome</label>
+                            <input type="text" id="edit-client-name" class="input-field" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Telefone</label>
+                            <input type="tel" id="edit-client-phone" class="input-field" placeholder="(00)00000-0000" oninput="formatPhoneEdit()">
+                        </div>
+                        <div class="form-group">
+                            <label>Endereço</label>
+                            <input type="text" id="edit-client-address" class="input-field">
+                        </div>
+                        <div class="form-group">
+                            <label>Ponto de Referência</label>
+                            <input type="text" id="edit-client-reference" class="input-field">
+                        </div>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-danger" onclick="deleteClient()">🗑️ Excluir</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeEditClientModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">💾 Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-btn active" data-screen="home">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Início</span>
+            </button>
+            <button class="nav-btn" data-screen="deliveries">
+                <span class="nav-icon">📦</span>
+                <span class="nav-label">Pedidos</span>
+            </button>
+            <button class="nav-btn" data-screen="replenishment">
+                <span class="nav-icon">🔄</span>
+                <span class="nav-label">Reposição</span>
+            </button>
+            <button class="nav-btn" data-screen="bathgroom">
+                <span class="nav-icon">✂️</span>
+                <span class="nav-label">Banho e Tosa</span>
+            </button>
+            <button class="nav-btn" data-screen="faq">
+                <span class="nav-icon">❓</span>
+                <span class="nav-label">Dúvidas</span>
+            </button>
+        </nav>
+
+        <!-- Screen: Deliveries List -->
+        <div id="deliveries-screen" class="screen">
+            <header class="app-header">
+                <h1>Delivery Pets</h1>
+                <button class="icon-btn" onclick="reportBug()">🚫</button>
+                <button class="icon-btn" onclick="showNewDeliveryForm()">➕</button>
+            </header>
+            
+            <div id="deliveries-list" class="deliveries-container">
+                <!-- Delivery cards will be rendered here -->
+            </div>
+
+            <div id="empty-state" class="empty-state hidden">
+                <span class="empty-icon">📦</span>
+                <p>Nenhuma entrega cadastrada</p>
+                <button class="btn btn-primary" onclick="showNewDeliveryForm()">Nova Entrega</button>
+            </div>
+
+            <button class="fab" onclick="showNewDeliveryForm()">➕</button>
+        </div>
+
+        <!-- Screen: New Delivery Form -->
+        <div id="new-delivery-screen" class="screen">
+            <header class="app-header">
+                <button class="back-btn" onclick="showDeliveriesList()">←</button>
+                <h1>Nova Entrega</h1>
+            </header>
+
+            <form id="delivery-form" class="form" onsubmit="saveDelivery(event)">
+                <!-- Client Data Section -->
+                <section class="form-section">
+                    <h2 class="section-title">👤 Dados do Cliente</h2>
+                    
+                    <div class="form-group">
+                        <label for="client-search">Buscar Cliente</label>
+                        <input type="text" id="client-search" class="input-field" 
+                               placeholder="Digite para buscar..."
+                               oninput="searchClients(this.value)"
+                               onfocus="showClientDropdown()"
+                               autocomplete="off">
+                        <div id="client-dropdown" class="dropdown hidden"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="client-name">Nome *</label>
+                        <input type="text" id="client-name" class="input-field" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="client-phone">Telefone *</label>
+                        <input type="tel" id="client-phone" class="input-field" 
+                               placeholder="(00)00000-0000" required
+                               oninput="formatPhone(this)"
+                               maxlength="15">
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="no-phone">
+                        <label for="no-phone">Não tem telefone</label>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="client-address">Endereço *</label>
+                        <input type="text" id="client-address" class="input-field" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="client-reference">Ponto de Referência *</label>
+                        <input type="text" id="client-reference" class="input-field" required>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="include-maps-link" checked>
+                        <label for="include-maps-link">Incluir Link do Mapa</label>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="save-client" checked>
+                        <label for="save-client">Salvar novo cliente</label>
+                    </div>
+                </section>
+
+                <!-- Order Data Section -->
+                <section class="form-section">
+                    <h2 class="section-title">📋 Dados do Pedido</h2>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="loja-unica" onchange="toggleLojaUnica()">
+                        <label for="loja-unica">🏪 Loja Única</label>
+                    </div>
+
+                    <div id="loja-unica-section" class="form-group hidden">
+                        <label for="pickup-location">Local de Retirada</label>
+                        <select id="pickup-location" class="input-field" onchange="parseOrderItems()">
+                            <option value="">Selecione...</option>
+                            <option value="marcao">Marcão</option>
+                            <option value="chc">CHC</option>
+                            <option value="ruah">Rua H</option>
+                            <option value="lagoas">Lagoas</option>
+                            <option value="cdd">CDD</option>
+                            <option value="favelao">Favelão</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-description">Descrição do Pedido</label>
+                        <textarea id="order-description" class="input-field textarea" rows="4"
+                                  placeholder="1. Ração&#10;2. Areia&#10;3. Sachê"
+                                  oninput="parseOrderItems()"></textarea>
+                    </div>
+
+                    <div id="order-items-container" class="order-items">
+                        <!-- Parsed items will be rendered here -->
+                    </div>
+                </section>
+
+                <!-- Payment Section -->
+                <section class="form-section">
+                    <h2 class="section-title">💰 Valores</h2>
+
+                    <div class="form-group">
+                        <label for="total-value">Valor Total *</label>
+                        <div class="input-prefix">
+                            <span class="prefix">R$</span>
+                            <input type="text" id="total-value" class="input-field" 
+                                   placeholder="0,00" required
+                                   oninput="formatCurrency(this)"
+                                   onblur="validateChange()">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="payment-method">Forma de Pagamento</label>
+                        <select id="payment-method" class="input-field" onchange="togglePaymentOptions()">
+                            <option value="PIX">PIX</option>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Cartão">Cartão</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="already-paid" onchange="togglePaymentOptions()">
+                        <label for="already-paid">Pagar na entrega</label>
+                    </div>
+
+                    <div id="change-options" class="hidden">
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="needs-change" onchange="toggleChangeField()">
+                            <label for="needs-change">Precisa de troco</label>
+                        </div>
+
+                        <div id="change-value-group" class="form-group hidden">
+                            <label for="change-value">Valor do Troco *</label>
+                            <div class="input-prefix">
+                                <span class="prefix">R$</span>
+                                <input type="text" id="change-value" class="input-field" 
+                                       placeholder="0,00"
+                                       oninput="formatCurrency(this)"
+                                       onblur="validateChange()">
+                            </div>
+                            <span id="change-error" class="error-message hidden">O troco deve ser maior que o valor total</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Schedule Section -->
+                <section class="form-section">
+                    <h2 class="section-title">⏰ Horário</h2>
+
+                    <div class="form-group">
+                        <label for="delivery-time">Horário</label>
+                        <input type="text" id="delivery-time" class="input-field" 
+                               placeholder="00:00"
+                               oninput="formatTime(this); updateMessagePreview()"
+                               maxlength="5">
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="deliver-tomorrow" onchange="updateMessagePreview()">
+                        <label for="deliver-tomorrow">Entregar amanhã</label>
+                    </div>
+                </section>
+
+                <!-- Notes Section -->
+                <section class="form-section">
+                    <h2 class="section-title">📝 Observações</h2>
+
+                    <div class="form-group">
+                        <label for="notes">Observações</label>
+                        <textarea id="notes" class="input-field textarea" rows="3"
+                                  placeholder="Observações adicionais..."></textarea>
+                    </div>
+                </section>
+
+                <!-- Live Message Preview -->
+                <section class="form-section">
+                    <h2 class="section-title">👁️ Preview da Mensagem</h2>
+                    <div id="message-preview" class="message-preview">
+                        Preencha os dados para ver a mensagem...
+                    </div>
+                </section>
+
+                <button type="submit" class="btn btn-primary btn-full">💾 Salvar Entrega</button>
+            </form>
+        </div>
+
+        <!-- Screen: Replenishment -->
+        <div id="replenishment-screen" class="screen">
+            <header class="app-header">
+                <h1>Reposição</h1>
+                <div style="display: flex; gap: 10px;">
+                    <button class="icon-btn" onclick="recoverLastReplenishmentList()" title="Recuperar última lista">👁️</button>
+                    <button class="icon-btn" onclick="reportBug()">🚫</button>
+                </div>
+            </header>
+
+            <form id="replenishment-form" class="form">
+                <section class="form-section">
+                    <div class="form-group">
+                        <label for="store-select">Selecione a Loja</label>
+                        <select id="store-select" class="input-field" onchange="loadStoreData()">
+                            <option value="">Selecione...</option>
+                            <option value="marcao">Marcão</option>
+                            <option value="chc">CHC</option>
+                            <option value="ruah">Rua H</option>
+                            <option value="lagoas">Lagoas</option>
+                            <option value="cdd">CDD</option>
+                            <option value="favelao">Favelão</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- Product Categories -->
+                <section class="form-section">
+                    <!-- Ração Cachorro -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('racaoCachorro')">
+                            <div id="racaoCachorroAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🐶</span>
+                            <span class="category-label">Ração Cachorro</span>
+                        </div>
+                        <textarea id="racaoCachorro" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Ração Gato -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('racaoGato')">
+                            <div id="racaoGatoAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🐱</span>
+                            <span class="category-label">Ração Gato</span>
+                        </div>
+                        <textarea id="racaoGato" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Areia -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('areia')">
+                            <div id="areiaAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🕳️</span>
+                            <span class="category-label">Areia</span>
+                        </div>
+                        <textarea id="areia" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Passarinho -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('passarinho')">
+                            <div id="passarinhoAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🦜</span>
+                            <span class="category-label">Passarinho</span>
+                        </div>
+                        <textarea id="passarinho" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Avulsa -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('avulsa')">
+                            <div id="avulsaAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">📦</span>
+                            <span class="category-label">Avulsa</span>
+                        </div>
+                        <textarea id="avulsa" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Sachê -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('sache')">
+                            <div id="sacheAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🥩</span>
+                            <span class="category-label">Sachê</span>
+                        </div>
+                        <textarea id="sache" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Remédio -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('remedio')">
+                            <div id="remedioAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">💊</span>
+                            <span class="category-label">Remédio</span>
+                        </div>
+                        <textarea id="remedio" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+<!-- Shampoo -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('shampoo')">
+                            <div id="shampooAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🧼</span>
+                            <span class="category-label">Shampoo</span>
+                        </div>
+                        <textarea id="shampoo" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Canaletado -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('canaletado')">
+                            <div id="canaletadoAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">📌</span>
+                            <span class="category-label">Canaletado</span>
+                        </div>
+                        <textarea id="canaletado" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Prateleira -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('prateleira')">
+                            <div id="prateleiraAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">📚</span>
+                            <span class="category-label">Prateleira</span>
+                        </div>
+                        <textarea id="prateleira" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+
+                    <!-- Saco Fechado -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleSacoFechado()">
+                            <div id="sacoFechadoAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">⚖️</span>
+                            <span class="category-label">Saco Fechado</span>
+                        </div>
+                        <div id="sacoFechado-content" class="category-content hidden">
+                            <div class="form-group">
+                                <label>15kg</label>
+                                <textarea id="saco15kg" class="input-field textarea" 
+                                          placeholder="Itens de 15kg..."
+                                          rows="2"
+                                          oninput="updateReplenishmentMessage()"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>10kg</label>
+                                <textarea id="saco10kg" class="input-field textarea" 
+                                          placeholder="Itens de 10kg..."
+                                          rows="2"
+                                          oninput="updateReplenishmentMessage()"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Produtos para Loja -->
+                    <div class="category-group">
+                        <div class="category-header" onclick="toggleCategory('produtosLoja')">
+                            <div id="produtosLojaAtivo" class="toggle-switch"></div>
+                            <span class="category-icon">🧹</span>
+                            <span class="category-label">Produtos para Loja</span>
+                        </div>
+                        <textarea id="produtosLoja" class="input-field textarea category-content hidden" 
+                                  rows="3" placeholder="Itens..." oninput="updateReplenishmentMessage()"></textarea>
+                    </div>
+                </section>
+
+                <!-- Message Preview -->
+                <section class="form-section">
+                    <h2 class="section-title">👁️ Preview da Mensagem</h2>
+                    <div id="replenishment-preview" class="message-preview">
+                        Selecione uma loja e adicione itens...
+                    </div>
+                </section>
+
+                <!-- Action Buttons -->
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary" onclick="copyReplenishmentMessage()">
+                        📋 Copiar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="sendReplenishmentWhatsApp()">
+                        📱 Enviar WhatsApp
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Screen: Banho e Tosa -->
+        <div id="bathgroom-screen" class="screen">
+            <header class="app-header">
+                <h1>✂️ Banho e Tosa</h1>
+                <button class="icon-btn" onclick="reportBug()">🚫</button>
+                <button class="icon-btn" onclick="showBathgroomForm()">➕</button>
+            </header>
+
+            <!-- Lista de Agendamentos -->
+            <div id="bathgroom-list" class="deliveries-container">
+                <!-- Agendamentos serão renderizados aqui -->
+            </div>
+
+            <div id="bathgroom-empty" class="empty-state hidden">
+                <span class="empty-icon">✂️</span>
+                <p>Nenhum agendamento cadastrado</p>
+                <button class="btn btn-primary" onclick="showBathgroomForm()">Novo Agendamento</button>
+            </div>
+        </div>
+
+        <!-- Screen: Dúvidas Bobas -->
+        <div id="faq-screen" class="screen">
+            <header class="app-header">
+                <h1>❓ Dúvidas Bobas</h1>
+                <button class="icon-btn" onclick="reportBug()">🚫</button>
+            </header>
+
+            <div class="faq-container">
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Como cadastro um novo cliente no Banho e Tosa?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Na tela de Banho e Tosa, use o campo <strong>"🔎 Buscar Cliente Cadastrado"</strong> para achar um cliente já salvo. Se for um cliente novo, escreva o nome no campo <strong>"✏️ Nome do Novo Cliente"</strong> e marque a opção "Salvar/Atualizar cliente" antes de salvar.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>O que é a opção "Loja Única" nos pedidos?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Quando ativada, todos os itens do pedido são retirados na mesma loja (selecionada em "Local de Retirada"). Se deixar desmarcada, você pode escolher uma loja diferente para cada item do pedido.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Como funciona o TaxiDog?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>No Banho e Tosa, marque <strong>"🚐 TaxiDog"</strong> para buscar o pet no endereço do cliente. Isso revela os campos de endereço, ponto de referência e a opção de incluir a localização no mapa.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Os clientes somem no outro dia?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Não. Os pedidos/entregas são zerados todo dia novo, mas os <strong>clientes cadastrados permanecem salvos</strong> para você buscar novamente a qualquer momento.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Como gero o resumo de vendas?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Vá em <strong>Pedidos</strong>, toque no botão de resumo (📊) no topo e selecione a loja. O sistema calcula os totais por forma de pagamento e gera a mensagem pronta para copiar.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        <span>Achei um erro no app, o que faço?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Toque no botão <strong>🚫</strong> (canto superior) em qualquer tela para abrir o WhatsApp e reportar o bug diretamente.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Formulário Banho e Tosa -->
+        <div id="bathgroom-modal" class="modal hidden" style="z-index: 1001;">
+            <div class="modal-content" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h2 id="bathgroom-form-title">✂️ Novo Agendamento</h2>
+                    <button class="close-btn" onclick="closeBathgroomModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <form id="bathgroom-form" class="form">
+                        <section class="form-section">
+                            <h2 class="section-title">👤 Dados do Cliente</h2>
+                            
+                            <div class="form-group">
+                                <label for="bt-cliente-search">🔎 Buscar Cliente Cadastrado</label>
+                                <div style="position: relative;">
+                                    <input type="text" id="bt-cliente-search" class="input-field" 
+                                           placeholder="Digite para buscar um cliente..."
+                                           oninput="searchBTClient(this.value)"
+                                           autocomplete="off">
+                                    <div id="bt-client-dropdown" class="dropdown-menu hidden" style="position: absolute; top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto; z-index: 1002; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 4px; display: none;">
+                                        <!-- Client options will be rendered here -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bt-cliente">✏️ Nome do Novo Cliente</label>
+                                <input type="text" id="bt-cliente" class="input-field" 
+                                       placeholder="Ou escreva para iniciar novo cadastro..."
+                                       oninput="onBTNewClientInput(this.value)"
+                                       autocomplete="off">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bt-telefone">Telefone *</label>
+                                <input type="tel" id="bt-telefone" class="input-field" 
+                                       placeholder="(00)00000-0000"
+                                       oninput="formatBTPhone(this)">
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="bt-save-client">
+                                <label for="bt-save-client">Salvar/Atualizar cliente</label>
+                            </div>
+                        </section>
+
+                        <section class="form-section">
+                            <h2 class="section-title">🐶🐱 Dados do Pet</h2>
+                            
+                            <div class="form-group">
+                                <label for="bt-pet-nome">Nome do Pet *</label>
+                                <input type="text" id="bt-pet-nome" class="input-field" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bt-pet-raca">Raça</label>
+                                <input type="text" id="bt-pet-raca" class="input-field" placeholder="Raça do pet">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bt-pet-porte">Porte</label>
+                                <select id="bt-pet-porte" class="input-field">
+                                    <option value="">Selecione...</option>
+                                    <option value="RP">RP</option>
+                                    <option value="RMG">RMG</option>
+                                </select>
+                            </div>
+                        </section>
+
+                        <section class="form-section">
+                            <h2 class="section-title">✂️ Serviço</h2>
+                            
+                            <div class="form-group">
+                                <label for="bt-servico">Serviço</label>
+                                <input type="text" id="bt-servico" class="input-field" placeholder="Serviço a ser realizado">
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="bt-taxidog" onchange="toggleBTAddress()">
+                                <label for="bt-taxidog">🚐 TaxiDog</label>
+                            </div>
+
+                            <div id="bt-address-section" class="hidden">
+                                <div class="form-group">
+                                    <label for="bt-endereco">Endereço</label>
+                                    <input type="text" id="bt-endereco" class="input-field" placeholder="Endereço">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="bt-referencia">Ponto de Referência</label>
+                                    <input type="text" id="bt-referencia" class="input-field" placeholder="Ponto de referência">
+                                </div>
+
+                                <div class="form-group checkbox-group">
+                                    <input type="checkbox" id="bt-include-maps" checked>
+                                    <label for="bt-include-maps">Incluir Localização</label>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="form-section">
+                            <h2 class="section-title">💰 Valores</h2>
+                            
+                            <div class="form-group">
+                                <label for="bt-valor">Valor</label>
+                                <div class="input-prefix">
+                                    <span class="prefix">R$</span>
+                                    <input type="text" id="bt-valor" class="input-field" 
+                                           placeholder="0,00"
+                                           oninput="formatBTCurrency(this)">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bt-data">Data</label>
+                                <input type="date" id="bt-data" class="input-field">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bt-horario">Horário</label>
+                                <input type="text" id="bt-horario" class="input-field" 
+                                       placeholder="00:00"
+                                       oninput="formatBTTime(this)"
+                                       maxlength="5">
+                            </div>
+                        </section>
+
+                        <section class="form-section">
+                            <h2 class="section-title">📝 Observações</h2>
+                            
+                            <div class="form-group">
+                                <label for="bt-observacoes">Observações</label>
+                                <textarea id="bt-observacoes" class="input-field textarea" rows="3"
+                                          placeholder="Observações adicionais..."></textarea>
+                            </div>
+                        </section>
+
+                        <button type="button" class="btn btn-primary btn-full" onclick="copyBathgroomSchedule()">
+                            📋 Copiar
+                        </button>
+
+                        <button type="button" class="btn btn-secondary btn-full" style="margin-top: 10px;" onclick="saveBathgroomSchedule()">
+                            💾 Salvar Agendamento
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Popup -->
+        <div id="message-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Mensagem</h2>
+                    <button class="close-btn" onclick="closeModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <pre id="modal-message"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="copyMessage()">📋 Copiar</button>
+                    <button class="btn btn-primary" onclick="shareWhatsApp()">📱 WhatsApp</button>
+                    <button class="btn btn-secondary" onclick="shareSMS()">💬 SMS</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirm Delete Dialog -->
+        <div id="confirm-dialog" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Confirmar Exclusão</h2>
+                    <button class="close-btn" onclick="closeConfirmDialog()">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja excluir esta entrega?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeConfirmDialog()">Cancelar</button>
+                    <button class="btn btn-danger" onclick="confirmDelete()">Excluir</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Summary Modal -->
+        <div id="summary-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Gerar Resumo de Vendas</h2>
+                    <button class="close-btn" onclick="closeSummaryModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="summary-store">Selecione a Loja</label>
+                        <select id="summary-store" class="input-field">
+                            <option value="Marcão">Marcão</option>
+                            <option value="CHC">CHC</option>
+                            <option value="Rua H">Rua H</option>
+                            <option value="Lagoas">Lagoas</option>
+                            <option value="CDD">CDD</option>
+                            <option value="Favelão">Favelão</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="summary-observation">Observação (opcional)</label>
+                        <input type="text" id="summary-observation" class="input-field" placeholder="Ex: taxa entrega R$5,00">
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" style="width: 100%;" onclick="generateSalesSummary()">
+                            📊 Gerar Resumo
+                        </button>
+                    </div>
+                    <div id="summary-result-container" class="hidden">
+                        <label>Mensagem Gerada:</label>
+                        <pre id="summary-message"></pre>
+                        <button class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="copySummaryMessage()">
+                            📋 Copiar Mensagem
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

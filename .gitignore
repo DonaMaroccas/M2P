@@ -1,0 +1,19 @@
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local env
+.env
+.env.local
+
+# Build / deps (none needed for this static app, but keep safe)
+node_modules/
+dist/
+build/
