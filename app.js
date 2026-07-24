@@ -1192,10 +1192,17 @@ let message = '';
     if (delivery.itensPedido && delivery.itensPedido.length > 0) {
         message += `\n📦 Pedido:\n`;
         
-        delivery.itensPedido.forEach((item) => {
-            const storeText = item.store ? ` - ${item.store}` : ' - DEPOSITO';
-            message += `${item.text}${storeText}\n`;
-        });
+        // Se for loja unica, nao mostrar loja ao lado dos itens
+        if (delivery.retirada) {
+            delivery.itensPedido.forEach((item) => {
+                message += `${item.text}\n`;
+            });
+        } else {
+            delivery.itensPedido.forEach((item) => {
+                const storeText = item.store ? ` - ${item.store}` : ' - DEPOSITO';
+                message += `${item.text}${storeText}\n`;
+            });
+        }
     } else if (delivery.pedido) {
         message += `\n📦 Pedido:\n`;
         const lines = delivery.pedido.split('\n').filter(line => line.trim());
@@ -1293,10 +1300,17 @@ function copyDeliveryMessage(deliveryId) {
     if (delivery.itensPedido && delivery.itensPedido.length > 0) {
         message += `\n📦 Pedido:\n`;
         
-        delivery.itensPedido.forEach((item) => {
-            const storeText = item.store ? ` - ${item.store}` : ' - DEPOSITO';
-            message += `${item.text}${storeText}\n`;
-        });
+        // Se for loja unica, nao mostrar loja ao lado dos itens
+        if (delivery.retirada) {
+            delivery.itensPedido.forEach((item) => {
+                message += `${item.text}\n`;
+            });
+        } else {
+            delivery.itensPedido.forEach((item) => {
+                const storeText = item.store ? ` - ${item.store}` : ' - DEPOSITO';
+                message += `${item.text}${storeText}\n`;
+            });
+        }
     } else if (delivery.pedido) {
         message += `\n📦 Pedido:\n`;
         const lines = delivery.pedido.split('\n').filter(line => line.trim());
@@ -1363,10 +1377,17 @@ function shareDeliveryWhatsApp(deliveryId) {
     if (delivery.itensPedido && delivery.itensPedido.length > 0) {
         message += `\n📦 Pedido:\n`;
         
-        delivery.itensPedido.forEach((item) => {
-            const storeText = item.store ? ` - ${item.store}` : ' - DEPOSITO';
-            message += `${item.text}${storeText}\n`;
-        });
+        // Se for loja unica, nao mostrar loja ao lado dos itens
+        if (delivery.retirada) {
+            delivery.itensPedido.forEach((item) => {
+                message += `${item.text}\n`;
+            });
+        } else {
+            delivery.itensPedido.forEach((item) => {
+                const storeText = item.store ? ` - ${item.store}` : ' - DEPOSITO';
+                message += `${item.text}${storeText}\n`;
+            });
+        }
     } else if (delivery.pedido) {
         message += `\n📦 Pedido:\n${delivery.pedido}\n`;
     }
